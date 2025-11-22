@@ -1,14 +1,11 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+// [Mass]
+mod mass;
+pub use mass::AsMass;
+pub use mass::Mass;
+// [Temperature]
+mod temperature;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+#[cfg(not(feature = "f128_stable"))]
+type MetricsInternalType = f64;
+#[cfg(feature = "f128_stable")]
+type MetricsInternalType = f128;
