@@ -1,8 +1,11 @@
-use std::{cmp::Ordering, ops::{Add, Sub, Div, Mul}};
+//! Mass
+//! 
+//! Grams, kilograms, M⊕, M♃, and M☉
+use std::{cmp::Ordering, fmt::Display, ops::{Add, Div, Mul, Sub}};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{AsMass, MetricsInternalType};
+use crate::{AsMass, MetricsInternalType, define_ops_for_metric, define_prim_ops_for_metric, ratio};
 use paste::paste;
 
 /// Some mass "magnitudes".
@@ -67,11 +70,11 @@ impl Mass {
         }
     }
 
-    /// self → f64
+    /// self → `f64`
     pub fn as_f64(&self) -> f64 {
         let v = self.raw();
         #[cfg(feature = "f128_stable")]{if v > f64::MAX {
-            log::warn!("Contained raw value '{v}' of the Mass exceeds capacity of `f64`!");
+            log::warn!("Contained raw value '{v}' of the Mass exceeds the capacity of a `f64`!");
         }}
         v as f64
     }
@@ -100,11 +103,6 @@ const fn g_to_kg(g: MetricsInternalType) -> MetricsInternalType {
 /// kg to grams.
 const fn kg_to_g(kg: MetricsInternalType) -> MetricsInternalType {
     kg * 1_000.0 as MetricsInternalType
-}
-
-/// Generic ratio calc.
-const fn ratio(num: MetricsInternalType, denom: MetricsInternalType) -> MetricsInternalType {
-    num / denom
 }
 
 impl AsMass for Mass {
@@ -161,7 +159,7 @@ impl AsMass for Mass {
 
 /// Macro to define [AsMass] impls for a variety of primitives.
 macro_rules! define_asmass_for_prim {
-    (f $bits:expr) => {paste!{
+    (f [ $($bits:expr),+ ]) => {paste!{$(
         impl AsMass for [<f $bits>] {
             fn mo(&self) -> Mass { Mass::MO(*self as MetricsInternalType) }
             fn mj(&self) -> Mass { Mass::MJ(*self as MetricsInternalType) }
@@ -169,8 +167,9 @@ macro_rules! define_asmass_for_prim {
             fn kg(&self) -> Mass { Mass::Kg(*self as MetricsInternalType) }
             fn g(&self) -> Mass { Mass::G(*self as MetricsInternalType) }
         }
-    }};
-    ($bits:expr) => {paste!{
+    )*}};
+    ($($bits:expr),+) => {paste!{$(
+        // unsigned
         impl AsMass for [<u $bits>] {
             fn mo(&self) -> Mass { (*self as MetricsInternalType).mo() }
             fn mj(&self) -> Mass { (*self as MetricsInternalType).mj() }
@@ -178,7 +177,7 @@ macro_rules! define_asmass_for_prim {
             fn kg(&self) -> Mass { (*self as MetricsInternalType).kg() }
             fn g(&self) -> Mass { (*self as MetricsInternalType).g() }
         }
-
+        // signed
         impl AsMass for [<i $bits>] {
             fn mo(&self) -> Mass { (*self as MetricsInternalType).mo() }
             fn mj(&self) -> Mass { (*self as MetricsInternalType).mj() }
@@ -186,18 +185,13 @@ macro_rules! define_asmass_for_prim {
             fn kg(&self) -> Mass { (*self as MetricsInternalType).kg() }
             fn g(&self) -> Mass { (*self as MetricsInternalType).g() }
         }
-    }};
+    )*}};
 }
-define_asmass_for_prim!(f 32);
-define_asmass_for_prim!(f 64);
+#[cfg(not(feature = "f128_stable"))]
+define_asmass_for_prim!(f [32, 64]);
 #[cfg(feature = "f128_stable")]
-define_asmass_for_prim!(f 128);
-define_asmass_for_prim!(8);
-define_asmass_for_prim!(16);
-define_asmass_for_prim!(32);
-define_asmass_for_prim!(64);
-define_asmass_for_prim!(128);
-define_asmass_for_prim!(size);
+define_asmass_for_prim!(f [32, 64, 128]);
+define_asmass_for_prim!(8, 16, 32, 64, 128, size);
 
 impl PartialEq for Mass {
     fn eq(&self, other: &Self) -> bool {
@@ -212,113 +206,26 @@ impl PartialOrd for Mass {
     }
 }
 
-/// Define primitives-related ops for [Mass].
-macro_rules! define_prim_ops_for_mass {
-    (f $bits:expr) => {paste!{
-        impl Add<[<f $bits>]> for Mass {
-            type Output = Self;
-            fn add(self, rhs: [<f $bits>]) -> Self::Output { let mut s = self; s.set(self.raw() + rhs as MetricsInternalType); s }
-        }
-        impl Sub<[<f $bits>]> for Mass {
-            type Output = Self;
-            fn sub(self, rhs: [<f $bits>]) -> Self::Output { let mut s = self; s.set(self.raw() - rhs as MetricsInternalType); s }
-        }
-        impl Div<[<f $bits>]> for Mass {
-            type Output = Self;
-            fn div(self, rhs: [<f $bits>]) -> Self::Output { let mut s = self; s.set(self.raw() / rhs as MetricsInternalType); s }
-        }
-        impl Mul<[<f $bits>]> for Mass {
-            type Output = Self;
-            fn mul(self, rhs: [<f $bits>]) -> Self::Output { let mut s = self; s.set(self.raw() * rhs as MetricsInternalType); s }
-        }
-        impl Mul<Mass> for [<f $bits>] {
-            type Output = Mass;
-            fn mul(self, rhs: Mass) -> Self::Output { rhs * self }
-        }
-    }};
-    ($bits:expr) => {paste!{
-        // Unsigned ones …
-        impl Add<[<u $bits>]> for Mass {
-            type Output = Self;
-            fn add(self, rhs: [<u $bits>]) -> Self::Output { let mut s = self; s.set(self.raw() + rhs as MetricsInternalType); s }
-        }
-        impl Sub<[<u $bits>]> for Mass {
-            type Output = Self;
-            fn sub(self, rhs: [<u $bits>]) -> Self::Output { let mut s = self; s.set(self.raw() - rhs as MetricsInternalType); s }
-        }
-        impl Div<[<u $bits>]> for Mass {
-            type Output = Self;
-            fn div(self, rhs: [<u $bits>]) -> Self::Output { let mut s = self; s.set(self.raw() / rhs as MetricsInternalType); s }
-        }
-        impl Mul<[<u $bits>]> for Mass {
-            type Output = Self;
-            fn mul(self, rhs: [<u $bits>]) -> Self::Output { let mut s = self; s.set(self.raw() * rhs as MetricsInternalType); s }
-        }
-        impl Mul<Mass> for [<u $bits>] {
-            type Output = Mass;
-            fn mul(self, rhs: Mass) -> Self::Output { rhs * self as MetricsInternalType }
-        }
-        // Signatures for all!
-        impl Add<[<i $bits>]> for Mass {
-            type Output = Self;
-            fn add(self, rhs: [<i $bits>]) -> Self::Output { let mut s = self; s.set(self.raw() + rhs as MetricsInternalType); s }
-        }
-        impl Sub<[<i $bits>]> for Mass {
-            type Output = Self;
-            fn sub(self, rhs: [<i $bits>]) -> Self::Output { let mut s = self; s.set(self.raw() - rhs as MetricsInternalType); s }
-        }
-        impl Div<[<i $bits>]> for Mass {
-            type Output = Self;
-            fn div(self, rhs: [<i $bits>]) -> Self::Output { let mut s = self; s.set(self.raw() / rhs as MetricsInternalType); s }
-        }
-        impl Mul<[<i $bits>]> for Mass {
-            type Output = Self;
-            fn mul(self, rhs: [<i $bits>]) -> Self::Output { let mut s = self; s.set(self.raw() * rhs as MetricsInternalType); s }
-        }
-        impl Mul<Mass> for [<i $bits>] {
-            type Output = Mass;
-            fn mul(self, rhs: Mass) -> Self::Output { rhs * self as MetricsInternalType }
-        }
-    }};
-}
 // Fun for the whole family!
-define_prim_ops_for_mass!(f 32);
-define_prim_ops_for_mass!(f 64);
+#[cfg(not(feature = "f128_stable"))]
+define_prim_ops_for_metric!(f [32, 64]; Mass);
 #[cfg(feature = "f128_stable")]
-define_prim_ops_for_mass!(f 128);
-define_prim_ops_for_mass!(8);
-define_prim_ops_for_mass!(16);
-define_prim_ops_for_mass!(32);
-define_prim_ops_for_mass!(64);
-define_prim_ops_for_mass!(128);
-define_prim_ops_for_mass!(size);
-
-/// Define `$trait` for [Mass] along with the associated `$fn`.
-macro_rules! define_ops_for_mass {
-    ( [ $( ($trait:ident, $fn:ident) ),* ] ) => {
-        $(
-            // The root of all not-so-evil…
-            impl $trait<&Mass> for &Mass {
-                type Output = Mass;
-                fn $fn(self, rhs: &Mass) -> Self::Output { (*self).$fn(rhs.raw()) }
-            }
-            impl $trait for Mass {
-                type Output = Self;
-                fn $fn(self, rhs: Self) -> Self::Output {<&Mass as $trait<&Mass>>::$fn(&self, &rhs)}
-            }
-            impl $trait<Mass> for &Mass {
-                type Output = Mass;
-                fn $fn(self, rhs: Mass) -> Self::Output {<&Mass as $trait<&Mass>>::$fn(&self, &rhs)}
-            }
-            impl $trait<&Mass> for Mass {
-                type Output = Mass;
-                fn $fn(self, rhs: &Mass) -> Self::Output {<&Mass as $trait<&Mass>>::$fn(&self, rhs)}
-            }
-        )*
-    };
-}
+define_prim_ops_for_metric!(f [32, 64, 128]; Mass);
+define_prim_ops_for_metric!([8, 16, 32, 64, 128, size]; Mass);
 // Ye typical ops …
-define_ops_for_mass!([(Add, add), (Sub, sub), (Mul, mul), (Div, div)]);
+define_ops_for_metric!([(Add, add), (Sub, sub), (Mul, mul), (Div, div)]; Mass);
+
+impl Display for Mass {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::MO(v) => write!(f, "{:.2} M☉", v),
+            Self::MJ(v) => write!(f, "{:.3} M♃", v),
+            Self::ME(v) => write!(f, "{:.3} M⊕", v),
+            Self::Kg(v) => write!(f, "{:.1} kg", v),// preferably use grams if you need more than one decimal…
+            Self::G(v) => write!(f, "{:.0}g", v),// there's no mg (yet), but less than gram is not really in the menu for *this* library, currently.
+        }
+    }
+}
 
 #[cfg(test)]
 mod mass_tests {
@@ -335,9 +242,10 @@ mod mass_tests {
     }
 
     #[test]
-    fn calc_ops() {
+    fn operators() {
         let a = 1.kg();
         let b = 0.5.kg();
         let a_b = &a + &b;
+        assert_eq!(1.5.kg(), a_b);
     }
 }
