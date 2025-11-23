@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 pub mod iau;
 use crate::{MetricsInternalType, define_ops_for_metric, define_prim_ops_for_metric, iau::*, ratio};
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 pub enum SpatialUnit {
     /// Meters.
     M(MetricsInternalType),
@@ -20,13 +20,25 @@ pub enum SpatialUnit {
     /// R⊕ - Earth-radii.
     RE(MetricsInternalType),
     /// R☉ - Solar radii.
-    RO(MetricsInternalType),
-    /// Galactic radii. Highly variable… The ranges, naturally, in ly (but boxed as [SpatialUnit]).
+    RO(MetricsInternalType)
+}
+
+/// Spatials for megastructures (e.g. Galaxies).
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub enum Megastructure {
+    /// Galactic radii. Highly variable…
     GR {
-        visible_disk: RangeInclusive<Box<SpatialUnit>>,
-        arms: RangeInclusive<Box<SpatialUnit>>,
-        halo: RangeInclusive<Box<SpatialUnit>>
+        visible_disk: RangeInclusive<SpatialUnit>,
+        arms: RangeInclusive<SpatialUnit>,
+        halo: RangeInclusive<SpatialUnit>
     }
+}
+
+/// For e.g. [`Megastructure::contains()`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SpatialContained {
+    // GR-specific trio:
+    VisibleDisk, Arms, Halo,
 }
 
 pub trait AsSpatialUnit {
@@ -50,7 +62,6 @@ impl AsSpatialUnit for SpatialUnit {
             Self::RO(v) => Self::M(*v * R_SUN_METERS),
             Self::Au(v) => Self::M(*v * AU_METERS),
             Self::Ly(v) => Self::M(*v * LY_METERS),
-            _ => unimplemented!("OK - trying to convert {self:?} into meters doesn't quite work like that…")
         }
     }
 
@@ -61,7 +72,6 @@ impl AsSpatialUnit for SpatialUnit {
             Self::RO(v) => Self::RE(*v * ratio(R_SUN_METERS, R_EARTH_METERS)),
             Self::Au(v) => Self::RE(*v * ratio(AU_METERS, R_EARTH_METERS)),
             Self::Ly(v) => Self::RE(*v * ratio(LY_METERS, R_EARTH_METERS)),
-            _ => unimplemented!("OK - trying to convert {self:?} into R⊕ doesn't quite work like that…")
         }
     }
 
@@ -72,7 +82,6 @@ impl AsSpatialUnit for SpatialUnit {
             Self::RO(_) => self.clone(),
             Self::Au(v) => Self::RO(*v * ratio(AU_METERS, R_SUN_METERS)),
             Self::Ly(v) => Self::RO(*v * ratio(LY_METERS, R_SUN_METERS)),
-            _ => unimplemented!("OK - trying to convert {self:?} into R☉ doesn't quite work like that…")
         }
     }
 
@@ -83,7 +92,6 @@ impl AsSpatialUnit for SpatialUnit {
             Self::RO(v) => Self::Au(*v * ratio(R_SUN_METERS, AU_METERS)),
             Self::Au(_) => self.clone(),
             Self::Ly(v) => Self::Au(*v * ratio(LY_METERS, AU_METERS)),
-            _ => unimplemented!("OK - trying to convert {self:?} into au doesn't quite work like that…")
         }
     }
 
@@ -94,17 +102,26 @@ impl AsSpatialUnit for SpatialUnit {
             Self::RO(v) => Self::Ly(*v * ratio(R_SUN_METERS, LY_METERS)),
             Self::Au(v) => Self::Ly(*v * ratio(AU_METERS, LY_METERS)),
             Self::Ly(_) => self.clone(),
-            _ => unimplemented!("OK - trying to convert {self:?} into ly doesn't quite work like that…")
         }
     }
 }
 
-impl From<((SpatialUnit, SpatialUnit), (SpatialUnit, SpatialUnit), (SpatialUnit, SpatialUnit))> for SpatialUnit {
+impl From<((SpatialUnit, SpatialUnit), (SpatialUnit, SpatialUnit), (SpatialUnit, SpatialUnit))> for Megastructure {
     fn from(value: ((SpatialUnit, SpatialUnit), (SpatialUnit, SpatialUnit), (SpatialUnit, SpatialUnit))) -> Self {
         Self::GR {
-            visible_disk: Box::new(value.0.0)..=Box::new(value.0.1),
-            arms: Box::new(value.1.0)..=Box::new(value.1.1),
-            halo: Box::new(value.2.0)..=Box::new(value.2.1)
+            visible_disk: value.0.0..=value.0.1,
+            arms: value.1.0..=value.1.1,
+            halo: value.2.0..=value.2.1
+        }
+    }
+}
+
+impl From<((MetricsInternalType, MetricsInternalType), (MetricsInternalType, MetricsInternalType), (MetricsInternalType, MetricsInternalType))> for Megastructure {
+    fn from(value: ((MetricsInternalType, MetricsInternalType), (MetricsInternalType, MetricsInternalType), (MetricsInternalType, MetricsInternalType))) -> Self {
+        Self::GR {
+            visible_disk: value.0.0.ly()..=value.0.1.ly(),
+            arms: value.1.0.ly()..=value.1.1.ly(),
+            halo: value.2.0.ly()..=value.2.1.ly()
         }
     }
 }
@@ -118,7 +135,6 @@ impl SpatialUnit {
             Self::RO(_) => 3,
             Self::Au(_) => 4,
             Self::Ly(_) => 5,
-            _ => unimplemented!("GR is a rankless variant of SpatialUnit…")
         };
 
         match rank(self).cmp(&rank(other)) {
@@ -129,7 +145,6 @@ impl SpatialUnit {
                     Self::RO(_) => other.ro(),
                     Self::Au(_) => other.au(),
                     Self::Ly(_) => other.ly(),
-                    _ => unimplemented!("Converting non-GR '{other:?} into GR isn't exactly straightforward…")
                 };
                 (self.clone(), other_c)
             },
@@ -140,7 +155,6 @@ impl SpatialUnit {
                     Self::RO(_) => self.ro(),
                     Self::Au(_) => self.au(),
                     Self::Ly(_) => self.ly(),
-                    _ => unimplemented!("Converting non-GR '{self:?} into GR isn't exactly straightforward…")
                 };
                 (self_c, other.clone())
             },
@@ -156,7 +170,6 @@ impl SpatialUnit {
             Self::RO(v)|
             Self::Au(v)|
             Self::Ly(v) => *v,
-            _ => unimplemented!("GR contains multiple *ranges*, not any specific single raw value…")
         }
     }
 
@@ -167,7 +180,6 @@ impl SpatialUnit {
             Self::RO(v)|
             Self::Au(v)|
             Self::Ly(v) => *v = value,
-            _ => unimplemented!("GR contains multiple *ranges*, not any specific single raw value… So yeah, not even trying")
         }
     }
 }
@@ -180,29 +192,27 @@ impl PartialEq for SpatialUnit {
 
 impl PartialOrd for SpatialUnit {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        match (self, other) {
-            // normie units use unify()…
-            _ if !matches!(self, SpatialUnit::GR {..}) &&
-                 !matches!(other, SpatialUnit::GR {..}) => {
-                let (lhs, rhs) = self.unify(other);
-                match (lhs, rhs) {
-                    (SpatialUnit::M(a), SpatialUnit::M(b))   |
-                    (SpatialUnit::RE(a), SpatialUnit::RE(b)) |
-                    (SpatialUnit::RO(a), SpatialUnit::RO(b)) |
-                    (SpatialUnit::Au(a), SpatialUnit::Au(b)) |
-                    (SpatialUnit::Ly(a), SpatialUnit::Ly(b)) => a.total_cmp(&b).into(),
-                    _ => unimplemented!("Someone forgot to add match branch(es) for new SpatialUnit branch(es)…!")
-                }
-            },
+        let (lhs, rhs) = self.unify(other);
+        match (lhs, rhs) {
+            (SpatialUnit::M(a), SpatialUnit::M(b))   |
+            (SpatialUnit::RE(a), SpatialUnit::RE(b)) |
+            (SpatialUnit::RO(a), SpatialUnit::RO(b)) |
+            (SpatialUnit::Au(a), SpatialUnit::Au(b)) |
+            (SpatialUnit::Ly(a), SpatialUnit::Ly(b)) => a.total_cmp(&b).into(),
+            _ => unreachable!("unify() unified already")
+        }
+    }
+}
 
-            (SpatialUnit::GR { halo: h1,.. },
-             SpatialUnit::GR { halo: h2,.. }) => {
-                let m1: SpatialUnit = (h1.start().ly() + h1.end().ly()) / 2.0;
-                let m2: SpatialUnit = (h2.start().ly() + h2.end().ly()) / 2.0;
-                m1.partial_cmp(&m2)
-            },
-
-            _ => unimplemented!("The first branch should've captured all but GR variant…!")
+impl Megastructure {
+    pub fn contains(&self, s: &SpatialUnit) -> Option<SpatialContained> {
+        match self {
+            Self::GR { visible_disk, arms, halo } => match () {
+                _ if visible_disk.contains(s) => Some(SpatialContained::VisibleDisk),
+                _ if arms.contains(s) => Some(SpatialContained::Arms),
+                _ if halo.contains(s) => Some(SpatialContained::Halo),
+                _ => None
+            }
         }
     }
 }
@@ -251,3 +261,16 @@ define_prim_ops_for_metric!(f [32, 64, 128]; SpatialUnit);
 define_prim_ops_for_metric!([8, 16, 32, 64, 128, size]; SpatialUnit);
 // Ye typical ops …
 define_ops_for_metric!([(Add, add), (Sub, sub), (Mul, mul), (Div, div)]; SpatialUnit);
+
+#[cfg(test)]
+mod spatial_tests {
+    use super::*;
+
+    #[test]
+    fn gr_range_works() {
+        let gr = Megastructure::from(((6.ly(), 12.ly()), (15.ly(), 30.ly()), (40.ly(), 42.ly())));
+        assert_eq!(Some(SpatialContained::VisibleDisk), gr.contains(&7.0.ly()));
+        assert_ne!(Some(SpatialContained::Arms), gr.contains(&(15.0 - f64::EPSILON*10.0).ly()));
+        assert_eq!(Some(SpatialContained::Arms), gr.contains(&(15.0 + f64::EPSILON*10.0).ly()));
+    }
+}
