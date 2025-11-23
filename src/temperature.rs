@@ -11,11 +11,17 @@ mod k;
 pub use k::ABS_ZERO;
 use k::K_C_DELTA;
 use crate::{MetricsInternalType, define_ops_for_metric, define_prim_ops_for_metric};
+const K_NEUTRON: Temperature = Temperature::K(1e6);
+const K_WDWARF: Temperature = Temperature::K(1e5);
 
 /// Temperature variants.
 #[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 pub enum Temperature {
-    /// Black hole…
+    /// White Dwarf
+    D,
+    /// Neutron Star
+    N,
+    /// Black Hole
     X,
     /// Kelvin.
     K(MetricsInternalType),
@@ -37,6 +43,8 @@ impl AsTemperature for Temperature {
         match self {
             Self::K(v) => Self::K(v.max(0.0)),
             Self::C(v) => Self::K(*v - K_C_DELTA).k(),
+            Self::N => K_NEUTRON,
+            Self::D => K_WDWARF,
             Self::X => Self::X,
         }
     }
@@ -46,6 +54,8 @@ impl AsTemperature for Temperature {
         match self {
             Self::C(v) => Self::C(v.max(-K_C_DELTA)),
             Self::K(v) => Self::C(v.max(0.0) + K_C_DELTA),
+            Self::N => K_NEUTRON - K_C_DELTA,
+            Self::D => K_NEUTRON - K_C_DELTA,
             Self::X => Self::X
         }
     }
@@ -59,6 +69,8 @@ impl Temperature {
         match self {
             Self::C(v) |
             Self::K(v) => *v,
+            Self::D => K_WDWARF.raw(),
+            Self::N => K_NEUTRON.raw(),
             Self::X => MetricsInternalType::NAN
         }
     }
@@ -68,7 +80,9 @@ impl Temperature {
         match self {
             Self::C(v) |
             Self::K(v) => *v = to,
-            // Black holes stubbornly stay stubborn… if there was any change, it'd not be measureable by any means.
+            // Stellar remnants stubbornly stay stubborn…
+            Self::D |
+            Self::N |
             Self::X => ()
         }
     }
@@ -127,6 +141,10 @@ impl PartialEq for Temperature {
             (Self::X, _) |
             (_, Self::X) => false,
             
+            (Self::N, x) |
+            (x, Self::N) => x.k().eq(&K_NEUTRON),
+            (Self::D, x) |
+            (x, Self::D) => x.k().eq(&K_WDWARF),
             (Self::C(a), Self::C(b)) |
             (Self::K(a), Self::K(b)) => a.total_cmp(&b) == Ordering::Equal,
             (Self::K(a), Self::C(b)) |
@@ -150,6 +168,14 @@ impl PartialOrd for Temperature {
             // Black hole… yeah, impossible to order.
             (Self::X,_) |
             (_,Self::X) => None,
+            (Self::N, Self::N) |
+            (Self::D, Self::D) => Some(Ordering::Equal),
+            (Self::N, Self::D) => Some(Ordering::Greater),
+            (Self::D, Self::N) => Some(Ordering::Less),
+            (Self::N, x) |
+            (x, Self::N) => x.k().raw().total_cmp(&K_NEUTRON.raw()).into(),
+            (Self::D, x) |
+            (x, Self::D) => x.k().raw().total_cmp(&K_WDWARF.raw()).into(),
             (Self::C(a), Self::C(b)) |
             (Self::K(a), Self::K(b)) => a.total_cmp(&b).into(),
             (Self::C(c), Self::K(k)) => (*c - K_C_DELTA).total_cmp(&k).into(),
@@ -162,11 +188,28 @@ impl Display for Temperature {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::X => write!(f, "\u{221e}K"),
+            Self::N => write!(f, "{}", K_NEUTRON),
+            Self::D => write!(f, "{}", K_WDWARF),
             Self::K(v) => write!(f, "{:.1}K", v),
-            Self::C(v) => write!(f, "{:.1}⁰C", v),
+            Self::C(v) => write!(f, "{:.1}⁰C", v)
         }
     }
 }
+
+macro_rules! define_from_prim_temperature {
+    (f [$($bits:expr),+]) => {paste!{$(
+        impl From<[<f $bits>]> for Temperature { fn from(value: [<f $bits>]) -> Self { Self::K(value as MetricsInternalType )}}
+    )*}};
+    ($($bits:expr),+) => {paste!{$(
+        impl From<[<u $bits>]> for Temperature { fn from(value: [<u $bits>]) -> Self { Self::K(value as MetricsInternalType )}}
+        impl From<[<i $bits>]> for Temperature { fn from(value: [<i $bits>]) -> Self { Self::K(value as MetricsInternalType )}}
+    )*}};
+}
+#[cfg(not(feature = "f128_stable"))]
+define_from_prim_temperature!(f [32, 64]);
+#[cfg(feature = "f128_stable")]
+define_from_prim_temperature!(f [32, 64, 128]);
+define_from_prim_temperature!(8, 16, 32, 64, 128, size);
 
 #[cfg(test)]
 mod temperature_tests {
@@ -191,5 +234,6 @@ mod temperature_tests {
         let b = 50.k();
         assert!(a > b);
         assert_ne!(a, b);
+        let c = a / 2.0;
     }
 }
