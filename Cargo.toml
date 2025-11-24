@@ -1,6 +1,6 @@
 [package]
 name = "astrometrics"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 authors = ["Markku Sukanen <markku.sukanen@gmail.com>"]
 license = "MIT OR Apache-2.0"
@@ -26,4 +26,7 @@ maintenance = { status = "experimental" }
 
 [features]
 default = []
-f128_stable = []
+# flip on whenever f128 is stable enough (and hardware supported at large)…
+f128_stable = ["default"]
+# …someday, maybe…
+f256_exists = ["f128_stable"]

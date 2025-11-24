@@ -5,7 +5,7 @@ use std::{cmp::Ordering, fmt::Display, ops::{Add, Div, Mul, Sub}};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{AsMass, MetricsInternalType, define_ops_for_metric, define_prim_ops_for_metric, ratio};
+use crate::{AsMass, DefoAble, MetricsInternalType, defo, ratio};
 use paste::paste;
 
 /// Some mass "magnitudes".
@@ -21,6 +21,38 @@ pub enum Mass {
     MJ(MetricsInternalType),
     /// M☉ - Solar masses.
     MO(MetricsInternalType)
+}
+
+impl DefoAble for Mass {
+    fn raw(&self) -> MetricsInternalType {
+        match self {
+            Self::MO(v)|
+            Self::MJ(v)|
+            Self::ME(v)|
+            Self::Kg(v)|
+            Self::G(v) => *v
+        }
+    }
+
+    fn set(&mut self, to: MetricsInternalType) {
+        match self {
+            Self::MO(v)|
+            Self::MJ(v)|
+            Self::ME(v)|
+            Self::Kg(v)|
+            Self::G(v) => *v = to
+        }
+    }
+
+    fn cnv_into(&self, other: &Self) -> Self {
+        match other {
+            Self::G(_) => self.g(),
+            Self::Kg(_) => self.kg(),
+            Self::ME(_) => self.me(),
+            Self::MJ(_) => self.mj(),
+            Self::MO(_) => self.mo()
+        }
+    }
 }
 
 impl Mass {
@@ -46,49 +78,15 @@ impl Mass {
                 (*self, other_c)
             },
             Ordering::Less => {
-                let self_c = match other {
-                    Self::MO(_) => self.mo(),
-                    Self::MJ(_) => self.mj(),
-                    Self::ME(_) => self.me(),
-                    Self::Kg(_) => self.kg(),
-                    Self::G(_) => self.g()
-                };
+                let self_c = self.cnv_into(other);
                 (self_c, *other)
             },
             Ordering::Equal => (*self, *other)
         }
     }
 
-    /// Get the raw underlying value.
-    pub fn raw(&self) -> MetricsInternalType {
-        match self {
-            Self::MO(v)|
-            Self::MJ(v)|
-            Self::ME(v)|
-            Self::Kg(v)|
-            Self::G(v) => *v
-        }
-    }
-
     /// self → `f64`
-    pub fn as_f64(&self) -> f64 {
-        let v = self.raw();
-        #[cfg(feature = "f128_stable")]{if v > f64::MAX {
-            log::warn!("Contained raw value '{v}' of the Mass exceeds the capacity of a `f64`!");
-        }}
-        v as f64
-    }
-
-    /// Adjust self contents.
-    fn set(&mut self, to: MetricsInternalType) {
-        match self {
-            Self::MO(v)|
-            Self::MJ(v)|
-            Self::ME(v)|
-            Self::Kg(v)|
-            Self::G(v) => *v = to
-        }
-    }
+    pub fn as_f64(&self) -> f64 { self.into() }
 }
 
 const SOL_KG: MetricsInternalType = 1.98847e30;
@@ -187,11 +185,6 @@ macro_rules! define_asmass_for_prim {
         }
     )*}};
 }
-#[cfg(not(feature = "f128_stable"))]
-define_asmass_for_prim!(f [32, 64]);
-#[cfg(feature = "f128_stable")]
-define_asmass_for_prim!(f [32, 64, 128]);
-define_asmass_for_prim!(8, 16, 32, 64, 128, size);
 
 impl PartialEq for Mass {
     fn eq(&self, other: &Self) -> bool {
@@ -206,14 +199,12 @@ impl PartialOrd for Mass {
     }
 }
 
-// Fun for the whole family!
 #[cfg(not(feature = "f128_stable"))]
-define_prim_ops_for_metric!(f [32, 64]; Mass);
+define_asmass_for_prim!(f [32, 64]);
 #[cfg(feature = "f128_stable")]
-define_prim_ops_for_metric!(f [32, 64, 128]; Mass);
-define_prim_ops_for_metric!([8, 16, 32, 64, 128, size]; Mass);
-// Ye typical ops …
-define_ops_for_metric!([(Add, add), (Sub, sub), (Mul, mul), (Div, div)]; Mass);
+define_asmass_for_prim!(f [32, 64, 128]);
+define_asmass_for_prim!(8, 16, 32, 64, 128, size);
+defo!(Mass; float [32, 64, 128], int [8, 16, 32, 64, 128, size]);
 
 impl Display for Mass {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -239,6 +230,7 @@ mod mass_tests {
         assert!(a < b);
         assert!(a == c);
         assert!(b > c);
+        assert!(a < 2.0);
     }
 
     #[test]

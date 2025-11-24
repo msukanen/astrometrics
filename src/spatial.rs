@@ -1,13 +1,11 @@
-//! Length, Distance, etc.
-//! 
-//! * m, au, ly
+//! Length, Distance, Radii etc.
 use std::{cmp::Ordering, ops::{Add, Div, Mul, RangeInclusive, Sub}};
 use paste::paste;
 
 use serde::{Deserialize, Serialize};
 
 pub mod iau;
-use crate::{MetricsInternalType, define_ops_for_metric, define_prim_ops_for_metric, iau::*, ratio};
+use crate::{DefoAble, MetricsInternalType, defo, iau::*, ratio};
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 pub enum SpatialUnit {
@@ -149,21 +147,16 @@ impl SpatialUnit {
                 (self.clone(), other_c)
             },
             Ordering::Less => {
-                let self_c = match other {
-                    Self::M(_) => self.m(),
-                    Self::RE(_) => self.re(),
-                    Self::RO(_) => self.ro(),
-                    Self::Au(_) => self.au(),
-                    Self::Ly(_) => self.ly(),
-                };
+                let self_c = self.cnv_into(other);
                 (self_c, other.clone())
             },
             Ordering::Equal => (self.clone(), other.clone())
         }
     }
+}
 
-    /// Get the raw underlying value.
-    pub fn raw(&self) -> MetricsInternalType {
+impl DefoAble for SpatialUnit {
+    fn raw(&self) -> MetricsInternalType {
         match self {
             Self::M(v)|
             Self::RE(v)|
@@ -180,6 +173,16 @@ impl SpatialUnit {
             Self::RO(v)|
             Self::Au(v)|
             Self::Ly(v) => *v = value,
+        }
+    }
+
+    fn cnv_into(&self, other: &Self) -> Self {
+        match other {
+            Self::M(_) => self.m(),
+            Self::RE(_) => self.re(),
+            Self::RO(_) => self.ro(),
+            Self::Au(_) => self.au(),
+            Self::Ly(_) => self.ly()
         }
     }
 }
@@ -247,20 +250,13 @@ macro_rules! define_asspatial_for_prim {
         }
     )*}};
 }
+
 #[cfg(not(feature = "f128_stable"))]
 define_asspatial_for_prim!(f [32, 64]);
 #[cfg(feature = "f128_stable")]
 define_asspatial_for_prim!(f [32, 64, 128]);
 define_asspatial_for_prim!(8, 16, 32, 64, 128, size);
-
-// Fun for the whole family!
-#[cfg(not(feature = "f128_stable"))]
-define_prim_ops_for_metric!(f [32, 64]; SpatialUnit);
-#[cfg(feature = "f128_stable")]
-define_prim_ops_for_metric!(f [32, 64, 128]; SpatialUnit);
-define_prim_ops_for_metric!([8, 16, 32, 64, 128, size]; SpatialUnit);
-// Ye typical ops …
-define_ops_for_metric!([(Add, add), (Sub, sub), (Mul, mul), (Div, div)]; SpatialUnit);
+defo!(SpatialUnit; float [32, 64, 128], int [8, 16, 32, 64, 128, size]);
 
 #[cfg(test)]
 mod spatial_tests {
@@ -272,5 +268,12 @@ mod spatial_tests {
         assert_eq!(Some(SpatialContained::VisibleDisk), gr.contains(&7.0.ly()));
         assert_ne!(Some(SpatialContained::Arms), gr.contains(&(15.0 - f64::EPSILON*10.0).ly()));
         assert_eq!(Some(SpatialContained::Arms), gr.contains(&(15.0 + f64::EPSILON*10.0).ly()));
+    }
+
+    #[test]
+    fn comparison() {
+        let a = 1.ly();
+        assert!(a < 2);
+        assert!(2 > a);
     }
 }

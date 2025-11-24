@@ -1,6 +1,6 @@
 //! Temperature
 //! 
-//! Kelvin and the special case of black holes (which inherently defy measures…).
+//! Kelvin, Celsius, and the special cases of stellar remnants.
 use std::cmp::Ordering;
 use std::fmt::Display;
 use std::ops::{Add, Sub, Div, Mul};
@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 mod k;
 pub use k::ABS_ZERO;
 use k::K_C_DELTA;
-use crate::{MetricsInternalType, define_ops_for_metric, define_prim_ops_for_metric};
+use crate::{DefoAble, MetricsInternalType, defo};
 const K_NEUTRON: Temperature = Temperature::K(1e6);
 const K_WDWARF: Temperature = Temperature::K(1e5);
 
@@ -62,10 +62,21 @@ impl AsTemperature for Temperature {
 }
 
 impl Temperature {
+    /// self → `f64`.
+    pub fn as_f64(&self) -> f64 {
+        let v = self.raw();
+        #[cfg(feature = "f128_stable")]{
+            if v > f64::MAX { log::warn!("The internally combusted f128 '{v}' is too hot for f64 to handle. We're forced to cool it down, a lot…, down to {}", v as f64)}
+        }
+        v as f64
+    }
+}
+
+impl DefoAble for Temperature {
     /// Get the raw underlying value.
     /// 
     /// **Note** that black hole temperature is `NaN`.
-    pub fn raw(&self) -> MetricsInternalType {
+    fn raw(&self) -> MetricsInternalType {
         match self {
             Self::C(v) |
             Self::K(v) => *v,
@@ -87,22 +98,23 @@ impl Temperature {
         }
     }
 
-    /// self → `f64`.
-    pub fn as_f64(&self) -> f64 {
-        let v = self.raw();
-        #[cfg(feature = "f128_stable")]{
-            if v > f64::MAX { log::warn!("The internally combusted f128 '{v}' is too hot for f64 to handle. We're forced to cool it down, a lot…, down to {}", v as f64)}
+    fn cnv_into(&self, other: &Self) -> Self {
+        match other {
+            Self::X => Self::X,
+            Self::N => match self {
+                Self::X => Self::X,
+                _ => Self::N
+            },
+            Self::D => match self {
+                Self::X => Self::X,
+                Self::N => Self::N,
+                _ => Self::D
+            },
+            Self::C(_) => self.c(),
+            Self::K(_) => self.k()
         }
-        v as f64
     }
 }
-
-// Thermometers for the whole family!
-#[cfg(not(feature = "f128_stable"))]
-define_prim_ops_for_metric!(f [32, 64]; Temperature);
-#[cfg(feature = "f128_stable")]
-define_prim_ops_for_metric!(f [32, 64, 128]; Temperature);
-define_prim_ops_for_metric!([8, 16, 32, 64, 128, size]; Temperature);
 
 /// Macro to define [AsMass] impls for a variety of primitives.
 macro_rules! define_astemp_for_prim {
@@ -125,13 +137,6 @@ macro_rules! define_astemp_for_prim {
         }
     )*}};
 }
-#[cfg(not(feature = "f128_stable"))]
-define_astemp_for_prim!(f [32, 64]);
-#[cfg(feature = "f128_stable")]
-define_astemp_for_prim!(f [32, 64, 128]);
-define_astemp_for_prim!(8, 16, 32, 64, 128, size);
-// Ye typical ops …
-define_ops_for_metric!([(Add, add), (Sub, sub), (Mul, mul), (Div, div)]; Temperature);
 
 /// PartialEq quirks 101: [Temperature::X] is never eq() with anything *nor* is it ne() either …
 impl PartialEq for Temperature {
@@ -205,11 +210,20 @@ macro_rules! define_from_prim_temperature {
         impl From<[<i $bits>]> for Temperature { fn from(value: [<i $bits>]) -> Self { Self::K(value as MetricsInternalType )}}
     )*}};
 }
+
+// Convert primitives into Temperature::K
 #[cfg(not(feature = "f128_stable"))]
 define_from_prim_temperature!(f [32, 64]);
 #[cfg(feature = "f128_stable")]
 define_from_prim_temperature!(f [32, 64, 128]);
 define_from_prim_temperature!(8, 16, 32, 64, 128, size);
+
+#[cfg(not(feature = "f128_stable"))]
+define_astemp_for_prim!(f [32, 64]);
+#[cfg(feature = "f128_stable")]
+define_astemp_for_prim!(f [32, 64, 128]);
+define_astemp_for_prim!(8, 16, 32, 64, 128, size);
+defo!(Temperature; float [32, 64, 128], int [8, 16, 32, 64, 128, size]);
 
 #[cfg(test)]
 mod temperature_tests {
