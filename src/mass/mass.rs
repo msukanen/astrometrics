@@ -199,6 +199,13 @@ impl PartialOrd for Mass {
     }
 }
 
+impl Eq for Mass {}
+impl Ord for Mass {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
+    }
+}
+
 #[cfg(not(feature = "f128_stable"))]
 define_asmass_for_prim!(f [32, 64]);
 #[cfg(feature = "f128_stable")]
@@ -239,5 +246,6 @@ mod mass_tests {
         let b = 0.5.kg();
         let a_b = &a + &b;
         assert_eq!(1.5.kg(), a_b);
+        assert!(1.5.kg() == a_b);// see that Ord impl works
     }
 }
