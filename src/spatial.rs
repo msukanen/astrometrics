@@ -1,10 +1,12 @@
 //! Length, Distance, Radii etc.
-use std::{cmp::Ordering, ops::{Add, Div, Mul, RangeInclusive, Sub}};
+use std::{cmp::Ordering, ops::{Add, Div, Mul, Sub}};
 use paste::paste;
 
 use serde::{Deserialize, Serialize};
 
 pub mod iau;
+mod megastruct;
+pub use megastruct::{Megastructure, SpatialContained};
 use crate::{DefoAble, MetricsInternalType, defo, iau::*, ratio};
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy)]
@@ -21,24 +23,6 @@ pub enum SpatialUnit {
     RO(MetricsInternalType),
     /// Parsec.
     Pc(MetricsInternalType,)
-}
-
-/// Spatials for megastructures (e.g. Galaxies).
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub enum Megastructure {
-    /// Galactic radii. Highly variable…
-    GR {
-        visible_disk: RangeInclusive<SpatialUnit>,
-        arms: RangeInclusive<SpatialUnit>,
-        halo: RangeInclusive<SpatialUnit>
-    }
-}
-
-/// For e.g. [`Megastructure::contains()`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SpatialContained {
-    // GR-specific trio:
-    VisibleDisk, Arms, Halo,
 }
 
 pub trait AsSpatialUnit {
@@ -120,26 +104,6 @@ impl AsSpatialUnit for SpatialUnit {
             Self::Au(v) => Self::Pc(*v * ratio(AU_METERS, PARSEC_METERS)),
             Self::Ly(v) => Self::Pc(*v * ratio(LY_METERS, PARSEC_METERS)),
             Self::Pc(_) => *self,
-        }
-    }
-}
-
-impl From<((SpatialUnit, SpatialUnit), (SpatialUnit, SpatialUnit), (SpatialUnit, SpatialUnit))> for Megastructure {
-    fn from(value: ((SpatialUnit, SpatialUnit), (SpatialUnit, SpatialUnit), (SpatialUnit, SpatialUnit))) -> Self {
-        Self::GR {
-            visible_disk: value.0.0..=value.0.1,
-            arms: value.1.0..=value.1.1,
-            halo: value.2.0..=value.2.1
-        }
-    }
-}
-
-impl From<((MetricsInternalType, MetricsInternalType), (MetricsInternalType, MetricsInternalType), (MetricsInternalType, MetricsInternalType))> for Megastructure {
-    fn from(value: ((MetricsInternalType, MetricsInternalType), (MetricsInternalType, MetricsInternalType), (MetricsInternalType, MetricsInternalType))) -> Self {
-        Self::GR {
-            visible_disk: value.0.0.ly()..=value.0.1.ly(),
-            arms: value.1.0.ly()..=value.1.1.ly(),
-            halo: value.2.0.ly()..=value.2.1.ly()
         }
     }
 }
@@ -229,19 +193,6 @@ impl PartialOrd for SpatialUnit {
             (SpatialUnit::Ly(a), SpatialUnit::Ly(b)) |
             (SpatialUnit::Pc(a), SpatialUnit::Pc(b)) => a.total_cmp(&b).into(),
             _ => unreachable!("unify() unified already")
-        }
-    }
-}
-
-impl Megastructure {
-    pub fn contains(&self, s: &SpatialUnit) -> Option<SpatialContained> {
-        match self {
-            Self::GR { visible_disk, arms, halo } => match () {
-                _ if visible_disk.contains(s) => Some(SpatialContained::VisibleDisk),
-                _ if arms.contains(s) => Some(SpatialContained::Arms),
-                _ if halo.contains(s) => Some(SpatialContained::Halo),
-                _ => None
-            }
         }
     }
 }
