@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 mod k;
 pub use k::ABS_ZERO;
 use k::K_C_DELTA;
-use crate::{DefoAble, MetricsInternalType, defo};
+use crate::{DefoAble, MetricsInternalType, Squared, defo};
 const K_NEUTRON: Temperature = Temperature::K(1e6);
 const K_WDWARF: Temperature = Temperature::K(1e5);
 
@@ -201,20 +201,39 @@ impl Display for Temperature {
     }
 }
 
-macro_rules! define_from_prim_temperature {
-    (f [$($bits:expr),+]) => {paste!{$(
-        impl From<[<f $bits>]> for Temperature { fn from(value: [<f $bits>]) -> Self { Self::K(value as MetricsInternalType )}}
-    )*}};
-    ($($bits:expr),+) => {paste!{$(
-        impl From<[<u $bits>]> for Temperature { fn from(value: [<u $bits>]) -> Self { Self::K(value as MetricsInternalType )}}
-        impl From<[<i $bits>]> for Temperature { fn from(value: [<i $bits>]) -> Self { Self::K(value as MetricsInternalType )}}
-    )*}};
+impl Squared for Temperature {
+    /// Self squared…
+    /// 
+    /// Note that squaring temperature values is *usually* utterly meaningless, but it is useful in some equations.
+    fn sq(&self) -> Self {
+        match self {
+            Self::C(v) => Self::C(v * v),
+            Self::K(v) => Self::K(v * v),
+            // No point to do anything about these:
+            Self::D => Self::D,
+            Self::N => Self::N,
+            Self::X => Self::X
+        }
+    }
 }
 
-// Convert primitives into Temperature::K
-#[cfg(not(feature = "f128_stable"))]
-define_from_prim_temperature!(f [32, 64]);
-#[cfg(feature = "f128_stable")]
+macro_rules! define_from_prim_temperature {
+    (f [$($bits:tt),+]) => {$(define_from_prim_temperature!(@f $bits);)*};
+    // f128 special case - drop when f128 is stable enough (and/or hardwarewise useable).
+    (@f 128) => {
+        #[cfg(feature = "f128_stable")]
+        define_from_prim_temperature!(@b f 128);
+    };
+    (@f $bits:tt) => {define_from_prim_temperature!(@b f $bits);};
+    ($($bits:tt),+) => {paste!{$(
+        define_from_prim_temperature!(@b u $bits);
+        define_from_prim_temperature!(@b i $bits);
+    )*}};
+    (@b $prefix:ident $bits:tt) => {paste!{
+        impl From<[<$prefix $bits>]> for Temperature { fn from(value: [<$prefix $bits>]) -> Self { Self::K(value as MetricsInternalType )}}
+    }}
+}
+
 define_from_prim_temperature!(f [32, 64, 128]);
 define_from_prim_temperature!(8, 16, 32, 64, 128, size);
 
