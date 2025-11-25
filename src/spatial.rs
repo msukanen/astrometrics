@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 pub mod iau;
 mod megastruct;
 pub use megastruct::{Megastructure, SpatialContained};
-use crate::{DefoAble, MetricsInternalType, defo, iau::*, ratio};
+use crate::{DefoAble, MetricsInternalType, Squared, defo, iau::*, ratio};
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 pub enum SpatialUnit {
@@ -25,19 +25,22 @@ pub enum SpatialUnit {
     Pc(MetricsInternalType,)
 }
 
-pub trait AsSpatialUnit {
+pub trait AsSpatialUnit : AsCelestialRadii {
     /// self → meters
     fn m(&self) -> SpatialUnit;
     /// self → au
     fn au(&self) -> SpatialUnit;
     /// self → ly
     fn ly(&self) -> SpatialUnit;
+    /// self → parsec
+    fn pc(&self) -> SpatialUnit;
+}
+
+pub trait AsCelestialRadii {
     /// self → Earth radii
     fn re(&self) -> SpatialUnit;
     /// self → Solar radii
     fn ro(&self) -> SpatialUnit;
-    /// self → parsec
-    fn pc(&self) -> SpatialUnit;
 }
 
 impl AsSpatialUnit for SpatialUnit {
@@ -49,28 +52,6 @@ impl AsSpatialUnit for SpatialUnit {
             Self::Au(v) => Self::M(*v * AU_METERS),
             Self::Ly(v) => Self::M(*v * LY_METERS),
             Self::Pc(v) => Self::M(*v * PARSEC_METERS),
-        }
-    }
-
-    fn re(&self) -> SpatialUnit {
-        match self {
-            Self::M(v) => Self::RE(ratio(*v, R_EARTH_METERS)),
-            Self::RE(_) => *self,
-            Self::RO(v) => Self::RE(*v * ratio(R_SUN_METERS, R_EARTH_METERS)),
-            Self::Au(v) => Self::RE(*v * ratio(AU_METERS, R_EARTH_METERS)),
-            Self::Ly(v) => Self::RE(*v * ratio(LY_METERS, R_EARTH_METERS)),
-            Self::Pc(v) => Self::RE(*v * ratio(PARSEC_METERS, R_EARTH_METERS)),
-        }
-    }
-
-    fn ro(&self) -> SpatialUnit {
-        match self {
-            Self::M(v) => Self::RO(ratio(*v, R_SUN_METERS)),
-            Self::RE(v) => Self::RO(*v * ratio(R_EARTH_METERS, R_SUN_METERS)),
-            Self::RO(_) => *self,
-            Self::Au(v) => Self::RO(*v * ratio(AU_METERS, R_SUN_METERS)),
-            Self::Ly(v) => Self::RO(*v * ratio(LY_METERS, R_SUN_METERS)),
-            Self::Pc(v) => Self::RO(*v * ratio(PARSEC_METERS, R_SUN_METERS)),
         }
     }
 
@@ -104,6 +85,30 @@ impl AsSpatialUnit for SpatialUnit {
             Self::Au(v) => Self::Pc(*v * ratio(AU_METERS, PARSEC_METERS)),
             Self::Ly(v) => Self::Pc(*v * ratio(LY_METERS, PARSEC_METERS)),
             Self::Pc(_) => *self,
+        }
+    }
+}
+
+impl AsCelestialRadii for SpatialUnit {
+    fn re(&self) -> SpatialUnit {
+        match self {
+            Self::M(v) => Self::RE(ratio(*v, R_EARTH_METERS)),
+            Self::RE(_) => *self,
+            Self::RO(v) => Self::RE(*v * ratio(R_SUN_METERS, R_EARTH_METERS)),
+            Self::Au(v) => Self::RE(*v * ratio(AU_METERS, R_EARTH_METERS)),
+            Self::Ly(v) => Self::RE(*v * ratio(LY_METERS, R_EARTH_METERS)),
+            Self::Pc(v) => Self::RE(*v * ratio(PARSEC_METERS, R_EARTH_METERS)),
+        }
+    }
+
+    fn ro(&self) -> SpatialUnit {
+        match self {
+            Self::M(v) => Self::RO(ratio(*v, R_SUN_METERS)),
+            Self::RE(v) => Self::RO(*v * ratio(R_EARTH_METERS, R_SUN_METERS)),
+            Self::RO(_) => *self,
+            Self::Au(v) => Self::RO(*v * ratio(AU_METERS, R_SUN_METERS)),
+            Self::Ly(v) => Self::RO(*v * ratio(LY_METERS, R_SUN_METERS)),
+            Self::Pc(v) => Self::RO(*v * ratio(PARSEC_METERS, R_SUN_METERS)),
         }
     }
 }
@@ -197,43 +202,67 @@ impl PartialOrd for SpatialUnit {
     }
 }
 
+impl Squared for SpatialUnit {
+    fn sq(&self) -> Self {
+        match self {
+            // More or less commonly used ones:
+            Self::M(v) => Self::M(v * v),
+            Self::Ly(v) => Self::Ly(v * v),
+            Self::Pc(v) => Self::Pc(v * v),
+            // The variants below exist just for completeness' sake…
+            Self::RE(v) => Self::RE(v * v),
+            Self::RO(v) => Self::RO(v * v),
+            Self::Au(v) => Self::Au(v * v),
+        }
+    }
+}
+
 /// Macro to define [AsSpatialUnit] impls for a variety of primitives.
 macro_rules! define_asspatial_for_prim {
-    (f [ $($bits:expr),+ ]) => {paste!{$(
+    (f [ $($bits:tt),+ ]) => {$(define_asspatial_for_prim!(@f $bits);)*};
+    // f128 special case - drop when f128 is stable enough (and/or hardwarewise useable).
+    (@f 128) => {
+        #[cfg(feature = "f128_stable")]
+        define_asspatial_for_prim!(@f_actual 128);
+    };
+    (@f $bits:tt) => {define_asspatial_for_prim!(@f_actual $bits);};
+    (@f_actual $bits:tt) => {paste!{
         impl AsSpatialUnit for [<f $bits>] {
             fn m(&self) -> SpatialUnit { SpatialUnit::M(*self as MetricsInternalType) }
-            fn re(&self) -> SpatialUnit { SpatialUnit::RE(*self as MetricsInternalType) }
-            fn ro(&self) -> SpatialUnit { SpatialUnit::RO(*self as MetricsInternalType) }
             fn au(&self) -> SpatialUnit { SpatialUnit::Au(*self as MetricsInternalType) }
             fn ly(&self) -> SpatialUnit { SpatialUnit::Ly(*self as MetricsInternalType) }
             fn pc(&self) -> SpatialUnit { SpatialUnit::Pc(*self as MetricsInternalType) }
         }
-    )*}};
-    ($($bits:expr),+) => {paste!{$(
+        impl AsCelestialRadii for [<f $bits>] {
+            fn re(&self) -> SpatialUnit { SpatialUnit::RE(*self as MetricsInternalType) }
+            fn ro(&self) -> SpatialUnit { SpatialUnit::RO(*self as MetricsInternalType) }
+        }
+    }};
+    ($($bits:tt),+) => {paste!{$(
         // unsigned
         impl AsSpatialUnit for [<u $bits>] {
             fn m(&self) -> SpatialUnit { (*self as MetricsInternalType).m() }
-            fn re(&self) -> SpatialUnit { (*self as MetricsInternalType).re() }
-            fn ro(&self) -> SpatialUnit { (*self as MetricsInternalType).ro() }
             fn au(&self) -> SpatialUnit { (*self as MetricsInternalType).au() }
             fn ly(&self) -> SpatialUnit { (*self as MetricsInternalType).ly() }
             fn pc(&self) -> SpatialUnit { (*self as MetricsInternalType).pc() }
+        }
+        impl AsCelestialRadii for [<u $bits>] {
+            fn re(&self) -> SpatialUnit { SpatialUnit::RE(*self as MetricsInternalType) }
+            fn ro(&self) -> SpatialUnit { SpatialUnit::RO(*self as MetricsInternalType) }
         }
         // signed
         impl AsSpatialUnit for [<i $bits>] {
             fn m(&self) -> SpatialUnit { (*self as MetricsInternalType).m() }
-            fn re(&self) -> SpatialUnit { (*self as MetricsInternalType).re() }
-            fn ro(&self) -> SpatialUnit { (*self as MetricsInternalType).ro() }
             fn au(&self) -> SpatialUnit { (*self as MetricsInternalType).au() }
             fn ly(&self) -> SpatialUnit { (*self as MetricsInternalType).ly() }
             fn pc(&self) -> SpatialUnit { (*self as MetricsInternalType).pc() }
         }
+        impl AsCelestialRadii for [<i $bits>] {
+            fn re(&self) -> SpatialUnit { SpatialUnit::RE(*self as MetricsInternalType) }
+            fn ro(&self) -> SpatialUnit { SpatialUnit::RO(*self as MetricsInternalType) }
+        }
     )*}};
 }
-
-#[cfg(not(feature = "f128_stable"))]
-define_asspatial_for_prim!(f [32, 64]);
-#[cfg(feature = "f128_stable")]
 define_asspatial_for_prim!(f [32, 64, 128]);
 define_asspatial_for_prim!(8, 16, 32, 64, 128, size);
 defo!(SpatialUnit; float [32, 64, 128], int [8, 16, 32, 64, 128, size]);
