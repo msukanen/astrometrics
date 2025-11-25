@@ -177,6 +177,7 @@ const fn ratio(num: MetricsInternalType, denom: MetricsInternalType) -> MetricsI
     num / denom
 }
 
+/// A *must-implement* trait for all metrics that utilize [defo] macro.
 pub trait DefoAble {
     /// Get the raw underlying value.
     fn raw(&self) -> MetricsInternalType;
@@ -184,4 +185,10 @@ pub trait DefoAble {
     fn set(&mut self, value: MetricsInternalType);
     /// Get `self` as the `other` variant.
     fn cnv_into(&self, other: &Self) -> Self;
+}
+
+/// A trait for anything that can be sensibly squared (x²).
+pub trait Squared {
+    /// Self squared…
+    fn sq(&self) -> Self;
 }
