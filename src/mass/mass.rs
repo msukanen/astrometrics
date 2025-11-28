@@ -109,7 +109,7 @@ impl AsMass for Mass {
             Self::MO(_) => *self,
             Self::MJ(v) => Self::MO(*v * ratio(JUP_KG, SOL_KG)),
             Self::ME(v) => Self::MO(*v * ratio(EARTH_KG, SOL_KG)),
-            Self::Kg(v) => Self::MO(*v * SOL_KG),
+            Self::Kg(v) => Self::MO(*v / SOL_KG),
             Self::G(v) => Self::MO(*v * kg_to_g(SOL_KG)),
         }
     }

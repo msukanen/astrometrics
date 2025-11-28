@@ -55,7 +55,7 @@ impl AsTemperature for Temperature {
             Self::C(v) => Self::C(v.max(-K_C_DELTA)),
             Self::K(v) => Self::C(v.max(0.0) + K_C_DELTA),
             Self::N => K_NEUTRON - K_C_DELTA,
-            Self::D => K_NEUTRON - K_C_DELTA,
+            Self::D => K_WDWARF - K_C_DELTA,
             Self::X => Self::X
         }
     }
