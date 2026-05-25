@@ -1,10 +1,10 @@
 [package]
-name = "astrometrics"
-version = "0.1.6"
-edition = "2024"
 authors = ["Markku Sukanen <markku.sukanen@gmail.com>"]
-license = "MIT OR Apache-2.0"
 repository = "https://github.com/msukanen/astrometrics.git"
+name = "astrometrics"
+version = "0.1.7"
+edition = "2024"
+license = "MIT OR Apache-2.0"
 keywords = ["astrometrics"]
 description = "Some simple (astro)metrics to be."
 
@@ -15,8 +15,8 @@ bench = true
 crate-type = ["lib"]
 
 [dependencies]
-env_logger = "0.11.8"
-log = "0.4.28"
+env_logger = "0.11.10"
+log = "0.4.30"
 paste = "1.0.15"
 serde = { version = "1.0.228", features = ["derive"] }
 

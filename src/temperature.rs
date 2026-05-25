@@ -70,6 +70,19 @@ impl Temperature {
         }
         v as f64
     }
+
+    /// t²
+    /// 
+    /// Rarely meaningful, but has its uses.
+    pub fn sq(&self) -> Self {
+        match self {
+            Self::C(v) => Self::C(v * v),
+            Self::K(v) => Self::K(v * v),
+            Self::D => Self::D,
+            Self::N => Self::N,
+            Self::X => Self::X,
+        }
+    }
 }
 
 impl DefoAble for Temperature {
