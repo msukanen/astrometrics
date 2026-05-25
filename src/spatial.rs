@@ -1,5 +1,5 @@
 //! Length, Distance, Radii etc.
-use std::{cmp::Ordering, ops::{Add, Div, Mul, Sub}};
+use std::{cmp::Ordering, ops::{Add, Div, DivAssign, Mul, MulAssign, Sub}};
 use paste::paste;
 
 use serde::{Deserialize, Serialize};
@@ -265,6 +265,47 @@ macro_rules! define_asspatial_for_prim {
 define_asspatial_for_prim!(f [32, 64, 128]);
 define_asspatial_for_prim!(8, 16, 32, 64, 128, size);
 defo!(SpatialUnit; float [32, 64, 128], int [8, 16, 32, 64, 128, size]);
+
+impl DivAssign<f64> for SpatialUnit {
+    /// Div-assign.
+    /// 
+    /// Note that Div-Z is a possibility, so — plan accordingly.
+    fn div_assign(&mut self, rhs: f64) {
+        match self {
+            Self::Au(v) |
+            Self::Ly(v) |
+            Self::M(v)  |
+            Self::Pc(v) |
+            Self::RE(v) |
+            Self::RO(v) => *v /= rhs
+        }
+    }
+}
+
+impl DivAssign<f32> for SpatialUnit {
+    fn div_assign(&mut self, rhs: f32) {
+        self.div_assign(rhs as f64);
+    }
+}
+
+impl MulAssign<f64> for SpatialUnit {
+    fn mul_assign(&mut self, rhs: f64) {
+        match self {
+            Self::Au(v) |
+            Self::Ly(v) |
+            Self::M(v)  |
+            Self::Pc(v) |
+            Self::RE(v) |
+            Self::RO(v) => *v *= rhs
+        }
+    }
+}
+
+impl MulAssign<f32> for SpatialUnit {
+    fn mul_assign(&mut self, rhs: f32) {
+        self.mul_assign(rhs as f64);
+    }
+}
 
 #[cfg(test)]
 mod spatial_tests {
