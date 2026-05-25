@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 
 pub mod iau;
 mod megastruct;
-pub use megastruct::{Megastructure, SpatialContained};
 use crate::{DefoAble, MetricsInternalType, Squared, defo, iau::*, ratio};
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy)]
@@ -270,6 +269,7 @@ defo!(SpatialUnit; float [32, 64, 128], int [8, 16, 32, 64, 128, size]);
 #[cfg(test)]
 mod spatial_tests {
     use super::*;
+    use crate::spatial::megastruct::{Megastructure, SpatialContained};
 
     #[test]
     fn gr_range_works() {

@@ -6,7 +6,7 @@ mod temperature;
 pub use temperature::{Temperature, AsTemperature};
 // [Spatial]
 mod spatial;
-pub use spatial::{AsSpatialUnit, SpatialUnit, iau::*};
+pub use spatial::{AsSpatialUnit, SpatialUnit, iau::*, AsCelestialRadii};
 
 // Whenever 'f128' is stable, we're ready for it.
 #[cfg(not(feature = "f128_stable"))]
