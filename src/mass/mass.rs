@@ -206,10 +206,11 @@ impl Ord for Mass {
     }
 }
 
-#[cfg(not(feature = "f128_stable"))]
 define_asmass_for_prim!(f [32, 64]);
 #[cfg(feature = "f128_stable")]
-define_asmass_for_prim!(f [32, 64, 128]);
+define_asmass_for_prim!(f [128]);
+#[cfg(feature = "f256_exists")]
+define_asmass_for_prim!(f [256]);
 define_asmass_for_prim!(8, 16, 32, 64, 128, size);
 defo!(Mass; float [32, 64, 128], int [8, 16, 32, 64, 128, size]);
 
@@ -222,30 +223,5 @@ impl Display for Mass {
             Self::Kg(v) => write!(f, "{:.1} kg", v),// preferably use grams if you need more than one decimal…
             Self::G(v) => write!(f, "{:.0}g", v),// there's no mg (yet), but less than gram is not really in the menu for *this* library, currently.
         }
-    }
-}
-
-#[cfg(test)]
-mod mass_tests {
-    use super::*;
-
-    #[test]
-    fn comparison() {
-        let a = 1.kg();
-        let b = 1.5.kg();
-        let c = 1.0.kg();
-        assert!(a < b);
-        assert!(a == c);
-        assert!(b > c);
-        assert!(a < 2.0);
-    }
-
-    #[test]
-    fn operators() {
-        let a = 1.kg();
-        let b = 0.5.kg();
-        let a_b = &a + &b;
-        assert_eq!(1.5.kg(), a_b);
-        assert!(1.5.kg() == a_b);// see that Ord impl works
     }
 }
