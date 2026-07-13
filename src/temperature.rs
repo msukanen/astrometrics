@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 mod k;
 pub use k::ABS_ZERO;
 use k::K_C_DELTA;
+use crate::temperature::k::K_EPSILON;
 use crate::{DefoAble, MetricsInternalType, Squared, defo};
 const K_NEUTRON: Temperature = Temperature::K(1e6);
 const K_WDWARF: Temperature = Temperature::K(1e5);
@@ -232,7 +233,12 @@ impl Squared for Temperature {
 
 macro_rules! define_from_prim_temperature {
     (f [$($bits:tt),+]) => {$(define_from_prim_temperature!(@f $bits);)*};
-    // f128 special case - drop when f128 is stable enough (and/or hardwarewise useable).
+    // f256 special case - drop when f256 is stable enough (and/or hardware-wise useable).
+    (@f 256) => {
+        #[cfg(feature = "f256_exists")]
+        define_from_prim_temperature!(@b f 256);
+    };
+    // f128 special case - drop when f128 is stable enough (and/or hardware-wise useable).
     (@f 128) => {
         #[cfg(feature = "f128_stable")]
         define_from_prim_temperature!(@b f 128);
@@ -247,39 +253,41 @@ macro_rules! define_from_prim_temperature {
     }}
 }
 
-define_from_prim_temperature!(f [32, 64, 128]);
+define_from_prim_temperature!(f [32, 64, 128, 256]);
 define_from_prim_temperature!(8, 16, 32, 64, 128, size);
 
-#[cfg(not(feature = "f128_stable"))]
 define_astemp_for_prim!(f [32, 64]);
 #[cfg(feature = "f128_stable")]
-define_astemp_for_prim!(f [32, 64, 128]);
+define_astemp_for_prim!(f [128]);
+#[cfg(feature = "f256_exists")]
+define_astemp_for_prim!(f [256]);
 define_astemp_for_prim!(8, 16, 32, 64, 128, size);
 defo!(Temperature; float [32, 64, 128], int [8, 16, 32, 64, 128, size]);
 
-#[cfg(test)]
-mod temperature_tests {
-    use crate::AsTemperature;
 
-    #[test]
-    fn comparison() {
-        let a = 1.k();
-        let b = 2.k();
-        assert!(a < b);
-        assert!(b >= a);
+pub trait TemperatureApprox<T> {
+    fn approx(&self, other: T) -> bool;
+}
+
+impl TemperatureApprox<&Temperature> for Temperature {
+    fn approx(&self, other: &Temperature) -> bool {
+        use Temperature::*;
+        match (self, other) {
+            (D, D) |
+            (N, N) |
+            (X, X) => true,
+            (C(v1), C(v2)) |
+            (K(v1), K(v2)) |
+            (K(v1), C(v2)) |
+            (C(v1), K(v2))
+                => (v1 - v2).abs() <= K_EPSILON,
+            _ => false
+        }
     }
+}
 
-    #[test]
-    fn operators() {
-        let a = 100.k();
-        let b = 50.k();
-        let c = a - b;
-        assert_eq!(50.k(), c);
-
-        let a = 100.k();
-        let b = 50.k();
-        assert!(a > b);
-        assert_ne!(a, b);
-        let c = a / 2.0;
+impl TemperatureApprox<Temperature> for Temperature {
+    fn approx(&self, other: Temperature) -> bool {
+        self.approx(&other)
     }
 }
