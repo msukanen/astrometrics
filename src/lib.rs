@@ -2,17 +2,22 @@
 mod mass;
 pub use mass::{Mass, AsMass};
 // [Temperature]
-mod temperature;
-pub use temperature::{Temperature, AsTemperature};
+mod temperature; pub use temperature::{AsTemperature, Temperature, TemperatureApprox};
 // [Spatial]
 mod spatial;
-pub use spatial::{AsSpatialUnit, SpatialUnit, iau::*, AsCelestialRadii};
+pub use spatial::{AsSpatialUnit, SpatialUnit, iau::*, AsCelestialRadii, megastruct::*};
 
-// Whenever 'f128' is stable, we're ready for it.
-#[cfg(not(feature = "f128_stable"))]
+#[cfg(
+    not(all(
+        feature = "f128_stable",
+        feature = "f256_exists"
+    ))
+)]
 type MetricsInternalType = f64;
 #[cfg(feature = "f128_stable")]
 type MetricsInternalType = f128;
+#[cfg(feature = "f256_exists")]
+type MetricsInternalType = f256;
 
 #[macro_export]
 /// `From<$metric>` for $some_primitive.
