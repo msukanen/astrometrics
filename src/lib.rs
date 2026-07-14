@@ -13,11 +13,11 @@ pub use spatial::{AsSpatialUnit, SpatialUnit, iau::*, AsCelestialRadii, megastru
         feature = "f256_exists"
     ))
 )]
-type MetricsInternalType = f64;
+pub type MetricsInternalType = f64;
 #[cfg(feature = "f128_stable")]
-type MetricsInternalType = f128;
+pub type MetricsInternalType = f128;
 #[cfg(feature = "f256_exists")]
-type MetricsInternalType = f256;
+pub type MetricsInternalType = f256;
 
 #[macro_export]
 /// `From<$metric>` for $some_primitive.
