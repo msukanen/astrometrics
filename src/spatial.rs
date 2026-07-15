@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod iau;
 pub(crate) mod megastruct;
-use crate::{DefoAble, MetricsInternalType, Squared, defo, iau::*, ratio};
+use crate::{Cubed, DefoAble, MetricsInternalType, Squared, defo, iau::*, ratio};
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 pub enum SpatialUnit {
@@ -202,16 +202,29 @@ impl PartialOrd for SpatialUnit {
 }
 
 impl Squared for SpatialUnit {
+    #[inline]
     fn sq(&self) -> Self {
         match self {
-            // More or less commonly used ones:
             Self::M(v) => Self::M(v * v),
             Self::Ly(v) => Self::Ly(v * v),
             Self::Pc(v) => Self::Pc(v * v),
-            // The variants below exist just for completeness' sake…
             Self::RE(v) => Self::RE(v * v),
             Self::RO(v) => Self::RO(v * v),
             Self::Au(v) => Self::Au(v * v),
+        }
+    }
+}
+
+impl Cubed for SpatialUnit {
+    #[inline]
+    fn cubed(&self) -> Self {
+        match self {
+            Self::M(v) => Self::M(v * v * v),
+            Self::Ly(v) => Self::Ly(v * v * v),
+            Self::Pc(v) => Self::Pc(v * v * v),
+            Self::RE(v) => Self::RE(v * v * v),
+            Self::RO(v) => Self::RO(v * v * v),
+            Self::Au(v) => Self::Au(v * v * v),
         }
     }
 }

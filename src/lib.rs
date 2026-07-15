@@ -197,3 +197,9 @@ pub trait Squared {
     /// Self squared…
     fn sq(&self) -> Self;
 }
+
+/// A trait for anything that can be sensibly cubed (x³).
+pub trait Cubed {
+    /// Self cubed…
+    fn cubed(&self) -> Self;
+}
