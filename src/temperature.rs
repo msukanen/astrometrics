@@ -63,7 +63,7 @@ impl Temperature {
     /// self → `f64`.
     pub fn as_f64(&self) -> f64 {
         let v = self.raw();
-        #[cfg(feature = "f128_stable")]{
+        #[cfg(feature = "f128-stable")]{
             if v > f64::MAX { log::warn!("The internally combusted f128 '{v}' is too hot for f64 to handle. We're forced to cool it down, a lot…, down to {}", v as f64)}
         }
         v as f64
@@ -232,12 +232,12 @@ macro_rules! define_from_prim_temperature {
     (f [$($bits:tt),+]) => {$(define_from_prim_temperature!(@f $bits);)*};
     // f256 special case - drop when f256 is stable enough (and/or hardware-wise useable).
     (@f 256) => {
-        #[cfg(feature = "f256_exists")]
+        #[cfg(feature = "f256-exists")]
         define_from_prim_temperature!(@b f 256);
     };
     // f128 special case - drop when f128 is stable enough (and/or hardware-wise useable).
     (@f 128) => {
-        #[cfg(feature = "f128_stable")]
+        #[cfg(feature = "f128-stable")]
         define_from_prim_temperature!(@b f 128);
     };
     (@f $bits:tt) => {define_from_prim_temperature!(@b f $bits);};
@@ -254,9 +254,9 @@ define_from_prim_temperature!(f [32, 64, 128, 256]);
 define_from_prim_temperature!(8, 16, 32, 64, 128, size);
 
 define_astemp_for_prim!(f [32, 64]);
-#[cfg(feature = "f128_stable")]
+#[cfg(feature = "f128-stable")]
 define_astemp_for_prim!(f [128]);
-#[cfg(feature = "f256_exists")]
+#[cfg(feature = "f256-exists")]
 define_astemp_for_prim!(f [256]);
 define_astemp_for_prim!(8, 16, 32, 64, 128, size);
 defo!(Temperature; float [32, 64, 128], int [8, 16, 32, 64, 128, size]);

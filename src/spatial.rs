@@ -234,7 +234,7 @@ macro_rules! define_asspatial_for_prim {
     (f [ $($bits:tt),+ ]) => {$(define_asspatial_for_prim!(@f $bits);)*};
     // f128 special case - drop when f128 is stable enough (and/or hardwarewise useable).
     (@f 128) => {
-        #[cfg(feature = "f128_stable")]
+        #[cfg(feature = "f128-stable")]
         define_asspatial_for_prim!(@f_actual 128);
     };
     (@f $bits:tt) => {define_asspatial_for_prim!(@f_actual $bits);};
