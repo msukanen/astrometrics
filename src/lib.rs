@@ -9,14 +9,14 @@ pub use spatial::{AsSpatialUnit, SpatialUnit, iau::*, AsCelestialRadii, megastru
 
 #[cfg(
     not(all(
-        feature = "f128_stable",
-        feature = "f256_exists"
+        feature = "f128-stable",
+        feature = "f256-exists"
     ))
 )]
 pub type MetricsInternalType = f64;
-#[cfg(feature = "f128_stable")]
+#[cfg(feature = "f128-stable")]
 pub type MetricsInternalType = f128;
-#[cfg(feature = "f256_exists")]
+#[cfg(feature = "f256-exists")]
 pub type MetricsInternalType = f256;
 
 #[macro_export]
@@ -46,7 +46,7 @@ macro_rules! defo {
         $(defo!(@float $bits; $metric);)*
     };
     (@float 128; $metric:ident) => {
-        #[cfg(feature = "f128_stable")]
+        #[cfg(feature = "f128-stable")]
         defo!(@impl_f 128; $metric);
     };
     (@float $bits:tt; $metric:ident) => {

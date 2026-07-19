@@ -7,10 +7,7 @@ use std::ops::{Add, Sub, Div, Mul};
 use paste::paste;
 use serde::{Deserialize, Serialize};
 
-mod k;
-pub use k::ABS_ZERO;
-use k::K_C_DELTA;
-use crate::temperature::k::K_EPSILON;
+mod k; use k::{K_C_DELTA, K_EPSILON};
 use crate::{DefoAble, MetricsInternalType, Squared, defo};
 const K_NEUTRON: Temperature = Temperature::K(1e6);
 const K_WDWARF: Temperature = Temperature::K(1e5);

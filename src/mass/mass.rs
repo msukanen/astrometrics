@@ -207,9 +207,9 @@ impl Ord for Mass {
 }
 
 define_asmass_for_prim!(f [32, 64]);
-#[cfg(feature = "f128_stable")]
+#[cfg(feature = "f128-stable")]
 define_asmass_for_prim!(f [128]);
-#[cfg(feature = "f256_exists")]
+#[cfg(feature = "f256-exists")]
 define_asmass_for_prim!(f [256]);
 define_asmass_for_prim!(8, 16, 32, 64, 128, size);
 defo!(Mass; float [32, 64, 128], int [8, 16, 32, 64, 128, size]);

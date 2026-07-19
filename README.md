@@ -8,7 +8,22 @@ All metrics support e.g. `Add`, `Sub`, `Mul` and `Div`, as owned, borrowed, and 
 `Mul` in general is "symmetric", unlike the other ops. `PartialOrd` and `PartialEq` are around
 in various forms (owned, borrowed, mixed…).
 
-### Distance Related
+### Traits
+
+#### `Squared`
+
+Implemented for:
+
+* `Temperature`
+* `SpatialUnit`
+
+#### `Cubed`
+
+Implemented for:
+
+* `SpatialUnit`
+
+### Distance Related…
 
 Part of `SpatialUnit` enum.
 
@@ -17,7 +32,7 @@ Part of `SpatialUnit` enum.
 * ly
 * pc
 
-### Mass Related
+### Mass Related…
 
 Part of `Mass` enum.
 
@@ -27,20 +42,20 @@ Part of `Mass` enum.
 * M♃ - Jupiter/Jovian masses
 * M☉ - Solar masses
 
-### Radii Related
+### Radii Related…
 
 Part of `SpatialUnit` enum.
 
 * R⊕
 * R☉
 
-#### Megastructures
+#### Megastructures…
 
 Part of `Megastructure` enum.
 
 * GR - galactic radii; a trio of ranges - visible disk, arms, and halo.
 
-### Temperature Related
+### Temperature Related…
 
 Part of `Temperature` enum.
 
