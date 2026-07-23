@@ -22,15 +22,28 @@ Implemented for:
 Implemented for:
 
 * `SpatialUnit`
+* `Mass`
 
 ### Distance Related…
 
 Part of `SpatialUnit` enum.
 
 * m
-* au
+* AU
 * ly
 * pc
+
+#### Coversion/Usage
+
+```rust
+// e.g.:
+let a = 70_000.au();
+let b = 0.7.ly();
+let x = a < b; // false...
+let y = (a + b); // y is in AU
+let z = (b + a); // z is in ly
+let o = y.km(); // an absurd number, …but here we go.
+```
 
 ### Mass Related…
 

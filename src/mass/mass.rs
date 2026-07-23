@@ -1,11 +1,11 @@
 //! Mass
 //! 
 //! Grams, kilograms, M⊕, M♃, and M☉
-use std::{cmp::Ordering, fmt::Display, ops::{Add, Div, Mul, Sub}};
+use std::{cmp::Ordering, fmt::Display, ops::{Add, Div, Mul, MulAssign, Sub}};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{AsMass, DefoAble, MetricsInternalType, defo, ratio};
+use crate::{AsMass, Cubed, DefoAble, MetricsInternalType, defo, ratio};
 use paste::paste;
 
 /// Some mass "magnitudes".
@@ -222,6 +222,18 @@ impl Display for Mass {
             Self::ME(v) => write!(f, "{:.3} M⊕", v),
             Self::Kg(v) => write!(f, "{:.1} kg", v),// preferably use grams if you need more than one decimal…
             Self::G(v) => write!(f, "{:.0}g", v),// there's no mg (yet), but less than gram is not really in the menu for *this* library, currently.
+        }
+    }
+}
+
+impl Cubed for Mass {
+    fn cubed(&self) -> Self {
+        match self {
+            Self::G(v) => Self::G(*v * *v * *v),
+            Self::Kg(v) => Self::Kg(*v * *v * *v),
+            Self::ME(v) => Self::ME(*v * *v * *v),
+            Self::MJ(v) => Self::MJ(*v * *v * *v),
+            Self::MO(v) => Self::MO(*v * *v * *v),
         }
     }
 }
