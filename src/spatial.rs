@@ -12,6 +12,8 @@ use crate::{Cubed, DefoAble, MetricsInternalType, Squared, defo, iau::*, ratio};
 pub enum SpatialUnit {
     /// Meters.
     M(MetricsInternalType),
+    /// Kilometers, for convenience.
+    Km(MetricsInternalType),
     /// Astronomical Unit.
     Au(MetricsInternalType),
     /// Light-years.
@@ -27,6 +29,8 @@ pub enum SpatialUnit {
 pub trait AsSpatialUnit : AsCelestialRadii {
     /// self → meters
     fn m(&self) -> SpatialUnit;
+    /// self → kilometers
+    fn km(&self) -> SpatialUnit;
     /// self → au
     fn au(&self) -> SpatialUnit;
     /// self → ly
@@ -47,6 +51,7 @@ impl AsSpatialUnit for SpatialUnit {
     fn m(&self) -> SpatialUnit {
         match self {
             Self::M(_) => *self,
+            Self::Km(v) => Self::Km(*v / 1_000.0),
             Self::RE(v) => Self::M(*v * R_EARTH_METERS),
             Self::RO(v) => Self::M(*v * R_SUN_METERS),
             Self::Au(v) => Self::M(*v * AU_METERS),
@@ -56,9 +61,23 @@ impl AsSpatialUnit for SpatialUnit {
     }
 
     #[inline(always)]
+    fn km(&self) -> SpatialUnit {
+        match self {
+            Self::M(v) => Self::Km(*v * 1_000.0),
+            Self::Km(_) => *self,
+            Self::RE(v) => Self::Km(*v * R_EARTH_METERS / 1_000.0),
+            Self::RO(v) => Self::Km(*v * R_SUN_METERS / 1_000.0),
+            Self::Au(v) => Self::Km(*v * AU_METERS / 1_000.0),
+            Self::Ly(v) => Self::Km(*v * LY_METERS / 1_000.0),
+            Self::Pc(v) => Self::Km(*v * PARSEC_METERS / 1_000.0),
+        }
+    }
+
+    #[inline(always)]
     fn au(&self) -> SpatialUnit {
         match self {
             Self::M(v) => Self::Au(ratio(*v, AU_METERS)),
+            Self::Km(v) => Self::Au(ratio(*v, AU_METERS / 1_000.0)),
             Self::RE(v) => Self::Au(*v * ratio(R_EARTH_METERS, AU_METERS)),
             Self::RO(v) => Self::Au(*v * ratio(R_SUN_METERS, AU_METERS)),
             Self::Au(_) => *self,
@@ -71,6 +90,7 @@ impl AsSpatialUnit for SpatialUnit {
     fn ly(&self) -> SpatialUnit {
         match self {
             Self::M(v) => Self::Ly(ratio(*v, LY_METERS)),
+            Self::Km(v) => Self::Ly(ratio(*v, LY_METERS / 1_000.0)),
             Self::RE(v) => Self::Ly(*v * ratio(R_EARTH_METERS, LY_METERS)),
             Self::RO(v) => Self::Ly(*v * ratio(R_SUN_METERS, LY_METERS)),
             Self::Au(v) => Self::Ly(*v * ratio(AU_METERS, LY_METERS)),
@@ -83,6 +103,7 @@ impl AsSpatialUnit for SpatialUnit {
     fn pc(&self) -> SpatialUnit {
         match self {
             Self::M(v) => Self::Pc(*v / PARSEC_METERS),
+            Self::Km(v) => Self::Pc(*v / PARSEC_METERS / 1_000.0),
             Self::RE(v) => Self::Pc(*v * ratio(R_EARTH_METERS, PARSEC_METERS)),
             Self::RO(v) => Self::Pc(*v * ratio(R_SUN_METERS, PARSEC_METERS)),
             Self::Au(v) => Self::Pc(*v * ratio(AU_METERS, PARSEC_METERS)),
@@ -97,6 +118,7 @@ impl AsCelestialRadii for SpatialUnit {
     fn re(&self) -> SpatialUnit {
         match self {
             Self::M(v) => Self::RE(ratio(*v, R_EARTH_METERS)),
+            Self::Km(v) => Self::RE(ratio(*v, R_EARTH_METERS / 1_000.0)),
             Self::RE(_) => *self,
             Self::RO(v) => Self::RE(*v * ratio(R_SUN_METERS, R_EARTH_METERS)),
             Self::Au(v) => Self::RE(*v * ratio(AU_METERS, R_EARTH_METERS)),
@@ -109,6 +131,7 @@ impl AsCelestialRadii for SpatialUnit {
     fn ro(&self) -> SpatialUnit {
         match self {
             Self::M(v) => Self::RO(ratio(*v, R_SUN_METERS)),
+            Self::Km(v) => Self::RO(ratio(*v, R_SUN_METERS / 1_000.0)),
             Self::RE(v) => Self::RO(*v * ratio(R_EARTH_METERS, R_SUN_METERS)),
             Self::RO(_) => *self,
             Self::Au(v) => Self::RO(*v * ratio(AU_METERS, R_SUN_METERS)),
@@ -123,17 +146,19 @@ impl SpatialUnit {
     fn unify(&self, other: &Self) -> (Self, Self) {
         let rank = |su:&SpatialUnit| match su {
             Self::M(_) => 1,
-            Self::RE(_) => 2,
-            Self::RO(_) => 3,
-            Self::Au(_) => 4,
-            Self::Ly(_) => 5,
-            Self::Pc(_) => 6,
+            Self::Km(_) => 2,
+            Self::RE(_) => 3,
+            Self::RO(_) => 4,
+            Self::Au(_) => 5,
+            Self::Ly(_) => 6,
+            Self::Pc(_) => 7,
         };
 
         match rank(self).cmp(&rank(other)) {
             Ordering::Greater => {
                 let other_c = match self {
                     Self::M(_) => other.m(),
+                    Self::Km(_) => other.km(),
                     Self::RE(_) => other.re(),
                     Self::RO(_) => other.ro(),
                     Self::Au(_) => other.au(),
@@ -156,6 +181,7 @@ impl DefoAble for SpatialUnit {
     fn raw(&self) -> MetricsInternalType {
         match self {
             Self::M(v)  |
+            Self::Km(v) |
             Self::RE(v) |
             Self::RO(v) |
             Self::Au(v) |
@@ -168,6 +194,7 @@ impl DefoAble for SpatialUnit {
     fn set(&mut self, value: MetricsInternalType) {
         match self {
             Self::M(v)  |
+            Self::Km(v) |
             Self::RE(v) |
             Self::RO(v) |
             Self::Au(v) |
@@ -180,6 +207,7 @@ impl DefoAble for SpatialUnit {
     fn cnv_into(&self, other: &Self) -> Self {
         match other {
             Self::M(_) => self.m(),
+            Self::Km(_) => self.km(),
             Self::RE(_) => self.re(),
             Self::RO(_) => self.ro(),
             Self::Au(_) => self.au(),
@@ -215,6 +243,7 @@ impl Squared for SpatialUnit {
     fn sq(&self) -> Self {
         match self {
             Self::M(v) => Self::M(v * v),
+            Self::Km(v) => Self::Km(v * v),
             Self::Ly(v) => Self::Ly(v * v),
             Self::Pc(v) => Self::Pc(v * v),
             Self::RE(v) => Self::RE(v * v),
@@ -229,6 +258,7 @@ impl Cubed for SpatialUnit {
     fn cubed(&self) -> Self {
         match self {
             Self::M(v) => Self::M(v * v * v),
+            Self::Km(v) => Self::Km(v * v * v),
             Self::Ly(v) => Self::Ly(v * v * v),
             Self::Pc(v) => Self::Pc(v * v * v),
             Self::RE(v) => Self::RE(v * v * v),
@@ -250,6 +280,7 @@ macro_rules! define_asspatial_for_prim {
     (@f_actual $bits:tt) => {paste!{
         impl AsSpatialUnit for [<f $bits>] {
             fn m(&self) -> SpatialUnit { SpatialUnit::M(*self as MetricsInternalType) }
+            fn km(&self) -> SpatialUnit { SpatialUnit::Km(*self as MetricsInternalType) }
             fn au(&self) -> SpatialUnit { SpatialUnit::Au(*self as MetricsInternalType) }
             fn ly(&self) -> SpatialUnit { SpatialUnit::Ly(*self as MetricsInternalType) }
             fn pc(&self) -> SpatialUnit { SpatialUnit::Pc(*self as MetricsInternalType) }
@@ -263,6 +294,7 @@ macro_rules! define_asspatial_for_prim {
         // unsigned
         impl AsSpatialUnit for [<u $bits>] {
             fn m(&self) -> SpatialUnit { (*self as MetricsInternalType).m() }
+            fn km(&self) -> SpatialUnit { (*self as MetricsInternalType).km() }
             fn au(&self) -> SpatialUnit { (*self as MetricsInternalType).au() }
             fn ly(&self) -> SpatialUnit { (*self as MetricsInternalType).ly() }
             fn pc(&self) -> SpatialUnit { (*self as MetricsInternalType).pc() }
@@ -274,6 +306,7 @@ macro_rules! define_asspatial_for_prim {
         // signed
         impl AsSpatialUnit for [<i $bits>] {
             fn m(&self) -> SpatialUnit { (*self as MetricsInternalType).m() }
+            fn km(&self) -> SpatialUnit { (*self as MetricsInternalType).km() }
             fn au(&self) -> SpatialUnit { (*self as MetricsInternalType).au() }
             fn ly(&self) -> SpatialUnit { (*self as MetricsInternalType).ly() }
             fn pc(&self) -> SpatialUnit { (*self as MetricsInternalType).pc() }
@@ -295,6 +328,7 @@ impl DivAssign<f64> for SpatialUnit {
     fn div_assign(&mut self, rhs: f64) {
         match self {
             Self::Au(v) |
+            Self::Km(v) |
             Self::Ly(v) |
             Self::M(v)  |
             Self::Pc(v) |
@@ -314,6 +348,7 @@ impl MulAssign<f64> for SpatialUnit {
     fn mul_assign(&mut self, rhs: f64) {
         match self {
             Self::Au(v) |
+            Self::Km(v) |
             Self::Ly(v) |
             Self::M(v)  |
             Self::Pc(v) |
@@ -332,6 +367,7 @@ impl MulAssign<f32> for SpatialUnit {
 // Some masquerading:
 impl SpatialUnit {
     #[inline] pub fn as_au(&self) -> SpatialUnit { self.raw().au() }
+    #[inline] pub fn as_km(&self) -> SpatialUnit { self.raw().km() }
     #[inline] pub fn as_ly(&self) -> SpatialUnit { self.raw().ly() }
     #[inline] pub fn as_m(&self)  -> SpatialUnit { self.raw().m() }
     #[inline] pub fn as_pc(&self) -> SpatialUnit { self.raw().pc() }
