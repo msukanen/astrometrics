@@ -7,16 +7,19 @@ mod temperature; pub use temperature::{AsTemperature, Temperature, TemperatureAp
 mod spatial;
 pub use spatial::{AsSpatialUnit, SpatialUnit, iau::*, AsCelestialRadii, megastruct::*};
 
+#[cfg(feature = "retro-32-bit")]
+pub type MetricsInternalType = f32;
 #[cfg(
     not(all(
+        feature = "retro-32-bit",
         feature = "f128-stable",
         feature = "f256-exists"
     ))
 )]
 pub type MetricsInternalType = f64;
-#[cfg(feature = "f128-stable")]
+#[cfg(all(feature = "f128-stable", not(feature = "retro-32-bit")))]
 pub type MetricsInternalType = f128;
-#[cfg(feature = "f256-exists")]
+#[cfg(all(feature = "f256-exists", not(feature = "retro-32-bit")))]
 pub type MetricsInternalType = f256;
 
 #[macro_export]

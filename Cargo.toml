@@ -25,6 +25,7 @@ maintenance = { status = "experimental" }
 
 [features]
 default = []
+retro-32-bit = []
 # flip on whenever f128 is stable enough (and hardware supported at large)…
 f128-stable = ["default"]
 # …someday, maybe…
