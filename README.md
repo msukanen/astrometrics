@@ -2,6 +2,14 @@
 
 Some astrometrics in Rust.
 
+## Float Types
+
+By default **astrometrics** uses 64-bit floats, but one can change this with feature flags…
+
+- `retro-32-bit` for 32-bit floats in case some hardware cannot operate with 64-bit.
+- `f128-stable` to plug-and-play `f128` whenever it's stable enough for general public.
+- `f256-exists` to plug-and-play `f256`, if/when *that* gets implemented…
+
 ## Metrics
 
 All metrics support e.g. `Add`, `Sub`, `Mul` and `Div`, as owned, borrowed, and a mixture of.
