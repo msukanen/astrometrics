@@ -22,24 +22,24 @@ in various forms (owned, borrowed, mixed…).
 
 Implemented for:
 
-* `Temperature`
-* `SpatialUnit`
+- `Temperature`
+- `SpatialUnit`
 
 #### `Cubed`
 
 Implemented for:
 
-* `SpatialUnit`
-* `Mass`
+- `SpatialUnit`
+- `Mass`
 
 ### Distance Related…
 
 Part of `SpatialUnit` enum.
 
-* m
-* AU
-* ly
-* pc
+- m
+- AU
+- ly
+- pc
 
 #### Coversion/Usage
 
@@ -57,31 +57,31 @@ let o = y.km(); // an absurd number, …but here we go.
 
 Part of `Mass` enum.
 
-* g
-* kg
-* M⊕ - Earth masses
-* M♃ - Jupiter/Jovian masses
-* M☉ - Solar masses
+- g
+- kg
+- M⊕ - Earth masses
+- M♃ - Jupiter/Jovian masses
+- M☉ - Solar masses
 
 ### Radii Related…
 
 Part of `SpatialUnit` enum.
 
-* R⊕
-* R☉
+- R⊕
+- R☉
 
 #### Megastructures…
 
 Part of `Megastructure` enum.
 
-* GR - galactic radii; a trio of ranges - visible disk, arms, and halo.
+- GR - galactic radii; a trio of ranges - visible disk, arms, and halo.
 
 ### Temperature Related…
 
 Part of `Temperature` enum.
 
-* C - Celsius
-* K - Kelvin
-* D - White Dwarf, a fixed approx. value.
-* N - Neutrol stars. A fixed approx. value.
-* X - Black Holes due their peculiarity…
+- C - Celsius
+- K - Kelvin
+- D - White Dwarf, a fixed approx. value.
+- N - Neutrol stars. A fixed approx. value.
+- X - Black Holes due their peculiarity…
