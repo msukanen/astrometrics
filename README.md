@@ -37,6 +37,7 @@ Implemented for:
 Part of `SpatialUnit` enum.
 
 - m
+- km
 - AU
 - ly
 - pc
