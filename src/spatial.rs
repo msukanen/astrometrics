@@ -43,6 +43,7 @@ pub trait AsCelestialRadii {
 }
 
 impl AsSpatialUnit for SpatialUnit {
+    #[inline(always)]
     fn m(&self) -> SpatialUnit {
         match self {
             Self::M(_) => *self,
@@ -54,6 +55,7 @@ impl AsSpatialUnit for SpatialUnit {
         }
     }
 
+    #[inline(always)]
     fn au(&self) -> SpatialUnit {
         match self {
             Self::M(v) => Self::Au(ratio(*v, AU_METERS)),
@@ -65,6 +67,7 @@ impl AsSpatialUnit for SpatialUnit {
         }
     }
 
+    #[inline(always)]
     fn ly(&self) -> SpatialUnit {
         match self {
             Self::M(v) => Self::Ly(ratio(*v, LY_METERS)),
@@ -76,6 +79,7 @@ impl AsSpatialUnit for SpatialUnit {
         }
     }
 
+    #[inline(always)]
     fn pc(&self) -> SpatialUnit {
         match self {
             Self::M(v) => Self::Pc(*v / PARSEC_METERS),
@@ -89,6 +93,7 @@ impl AsSpatialUnit for SpatialUnit {
 }
 
 impl AsCelestialRadii for SpatialUnit {
+    #[inline(always)]
     fn re(&self) -> SpatialUnit {
         match self {
             Self::M(v) => Self::RE(ratio(*v, R_EARTH_METERS)),
@@ -100,6 +105,7 @@ impl AsCelestialRadii for SpatialUnit {
         }
     }
 
+    #[inline(always)]
     fn ro(&self) -> SpatialUnit {
         match self {
             Self::M(v) => Self::RO(ratio(*v, R_SUN_METERS)),
@@ -146,6 +152,7 @@ impl SpatialUnit {
 }
 
 impl DefoAble for SpatialUnit {
+    #[inline(always)]
     fn raw(&self) -> MetricsInternalType {
         match self {
             Self::M(v)  |
@@ -157,6 +164,7 @@ impl DefoAble for SpatialUnit {
         }
     }
 
+    #[inline(always)]
     fn set(&mut self, value: MetricsInternalType) {
         match self {
             Self::M(v)  |
@@ -168,6 +176,7 @@ impl DefoAble for SpatialUnit {
         }
     }
 
+    #[inline]
     fn cnv_into(&self, other: &Self) -> Self {
         match other {
             Self::M(_) => self.m(),
@@ -202,7 +211,7 @@ impl PartialOrd for SpatialUnit {
 }
 
 impl Squared for SpatialUnit {
-    #[inline]
+    #[inline(always)]
     fn sq(&self) -> Self {
         match self {
             Self::M(v) => Self::M(v * v),
@@ -216,7 +225,7 @@ impl Squared for SpatialUnit {
 }
 
 impl Cubed for SpatialUnit {
-    #[inline]
+    #[inline(always)]
     fn cubed(&self) -> Self {
         match self {
             Self::M(v) => Self::M(v * v * v),
@@ -318,4 +327,14 @@ impl MulAssign<f32> for SpatialUnit {
     fn mul_assign(&mut self, rhs: f32) {
         self.mul_assign(rhs as f64);
     }
+}
+
+// Some masquerading:
+impl SpatialUnit {
+    #[inline] pub fn as_au(&self) -> SpatialUnit { self.raw().au() }
+    #[inline] pub fn as_ly(&self) -> SpatialUnit { self.raw().ly() }
+    #[inline] pub fn as_m(&self)  -> SpatialUnit { self.raw().m() }
+    #[inline] pub fn as_pc(&self) -> SpatialUnit { self.raw().pc() }
+    #[inline] pub fn as_re(&self) -> SpatialUnit { self.raw().re() }
+    #[inline] pub fn as_ro(&self) -> SpatialUnit { self.raw().ro() }
 }
