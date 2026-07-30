@@ -1,7 +1,7 @@
 //! Mass
 //! 
 //! Grams, kilograms, M⊕, M♃, and M☉
-use std::{cmp::Ordering, fmt::Display, ops::{Add, Div, Mul, MulAssign, Sub}};
+use std::{cmp::Ordering, fmt::Display, ops::{Add, Div, Mul, Sub}};
 
 use serde::{Deserialize, Serialize};
 
@@ -94,11 +94,13 @@ const JUP_KG: MetricsInternalType = 1.89813e27;
 const EARTH_KG: MetricsInternalType = 5.9722e24;
 
 /// Grams to kg.
+#[inline(always)]
 const fn g_to_kg(g: MetricsInternalType) -> MetricsInternalType {
     g / 1_000.0 as MetricsInternalType
 }
 
 /// kg to grams.
+#[inline(always)]
 const fn kg_to_g(kg: MetricsInternalType) -> MetricsInternalType {
     kg * 1_000.0 as MetricsInternalType
 }
