@@ -174,6 +174,16 @@ impl SpatialUnit {
             Ordering::Equal => (self.clone(), other.clone())
         }
     }
+
+    #[inline]
+    pub fn min(self, other: Self) -> Self {
+        if self <= other { self } else { other }
+    }
+
+    #[inline]
+    pub fn max(self, other: Self) -> Self {
+        if self >= other { self } else { other }
+    }
 }
 
 impl DefoAble for SpatialUnit {
