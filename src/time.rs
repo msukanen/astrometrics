@@ -1,5 +1,7 @@
-//! Time, as absurd as it can get…
-
+//! [TimeAdInfinitum]
+//! - "TAIm" /teɪm/
+//! 
+//! …you get the gist.
 use std::fmt::Display;
 
 #[derive(Debug, Clone, Copy)]
