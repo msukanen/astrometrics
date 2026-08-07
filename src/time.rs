@@ -25,6 +25,11 @@ impl Display for TimeAdInfinitumNotify {
     }
 }
 
+/// Scale agnostic timey-wimey.
+/// 
+/// What scale of time `short` expresses is up to you really, but
+/// treating it as 'seconds' is kinds of convenient.
+/// 
 pub struct TimeAdInfinitum {
     short: f64,
     step0: Vec<u64>,

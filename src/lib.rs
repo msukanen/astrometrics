@@ -8,7 +8,7 @@ mod spatial;
 pub use spatial::{AsSpatialUnit, SpatialUnit, iau::*, AsCelestialRadii, megastruct::*};
 // [AbsurdTime]
 mod time;
-pub use time::{TimeAdInfinitum, TimeAdInfinitumNotify};
+pub use time::{TimeAdInfinitum as TAIm, TimeAdInfinitumNotify};
 
 #[cfg(feature = "retro-32-bit")]
 pub type MetricsInternalType = f32;
